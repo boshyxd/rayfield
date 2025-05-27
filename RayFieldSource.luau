@@ -1,6 +1,6 @@
 --[[
 
-	Rayfield Interface Suite
+	Interface Suite
 	by Sirius
 
 	shlex | Designing + Programming
@@ -8,10 +8,6 @@
 	Max   | Programming
 
 ]]
-
-if debugX then
-	warn("Initialising Rayfield")
-end
 
 local function getService(name)
 	local service = game:GetService(name)
@@ -68,7 +64,7 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 	return if success then result else nil
 end
 
-local requestsDisabled = true --getgenv and getgenv().DISABLE_RAYFIELD_REQUESTS
+local requestsDisabled = true --getgenv and getgenv().DISABLE_INTERFACE_REQUESTS
 local InterfaceBuild = "3K3W"
 local Release = "Build 1.672"
 local RayfieldFolder = "Rayfield"
@@ -77,9 +73,9 @@ local ConfigurationExtension = ".rfld"
 local settingsTable = {
 	General = {
 		-- if needs be in order just make getSetting(name)
-		rayfieldOpen = { Type = "bind", Value = "K", Name = "Rayfield Keybind" },
+		rayfieldOpen = { Type = "bind", Value = "K", Name = "Interface Keybind" },
 		-- buildwarnings
-		-- rayfieldprompts
+		-- prompts
 	},
 	System = {
 		usageAnalytics = { Type = "toggle", Value = true, Name = "Anonymised Analytics" },
@@ -136,7 +132,7 @@ local function loadSettings()
 			-- for debug in studio
 			if useStudio then
 				file = [[
-		{"General":{"rayfieldOpen":{"Value":"K","Type":"bind","Name":"Rayfield Keybind","Element":{"HoldToInteract":false,"Ext":true,"Name":"Rayfield Keybind","Set":null,"CallOnChange":true,"Callback":null,"CurrentKeybind":"K"}}},"System":{"usageAnalytics":{"Value":false,"Type":"toggle","Name":"Anonymised Analytics","Element":{"Ext":true,"Name":"Anonymised Analytics","Set":null,"CurrentValue":false,"Callback":null}}}}
+		{"General":{"rayfieldOpen":{"Value":"K","Type":"bind","Name":"Interface Keybind","Element":{"HoldToInteract":false,"Ext":true,"Name":"Interface Keybind","Set":null,"CallOnChange":true,"Callback":null,"CurrentKeybind":"K"}}},"System":{"usageAnalytics":{"Value":false,"Type":"toggle","Name":"Anonymised Analytics","Element":{"Ext":true,"Name":"Anonymised Analytics","Set":null,"CurrentValue":false,"Callback":null}}}}
 	]]
 			end
 
@@ -176,7 +172,7 @@ local function loadSettings()
 
 	if not success then
 		if writefile then
-			warn("Rayfield had an issue accessing configuration saving capability.")
+			warn("Had an issue accessing configuration saving capability.")
 		end
 	end
 end
@@ -190,30 +186,6 @@ loadSettings()
 if debugX then
 	warn("Settings Loaded")
 end
-
---if not cachedSettings or not cachedSettings.System or not cachedSettings.System.usageAnalytics then
---	local fileFunctionsAvailable = isfile and writefile and readfile
-
---	if not fileFunctionsAvailable and not useStudio then
---		warn('Rayfield Interface Suite | Sirius Analytics:\n\n\nAs you don\'t have file functionality with your executor, we are unable to save whether you want to opt in or out to analytics.\nIf you do not want to take part in anonymised usage statistics, let us know in our Discord at sirius.menu/discord and we will manually opt you out.')
---		analytics = true
---	else
---		prompt.create(
---			'Help us improve',
---	            [[Would you like to allow Sirius to collect usage statistics?
-
---<font transparency='0.4'>No data is linked to you or your personal activity.</font>]],
---			'Continue',
---			'Cancel',
---			function(result)
---				settingsTable.System.usageAnalytics.Value = result
---				analytics = result
---			end
---		)
---	end
-
---	repeat task.wait() until analytics ~= nil
---end
 
 if not requestsDisabled then
 	if debugX then
@@ -232,12 +204,10 @@ if not requestsDisabled then
 				end)
 				if success and reporter then
 					pcall(function()
-						reporter.report("Rayfield", Release, InterfaceBuild)
+						reporter.report("Interface", Release, InterfaceBuild)
 					end)
 				else
-					warn(
-						"Failed to load or execute the reporter. \nPlease notify Rayfield developers at sirius.menu/discord."
-					)
+					warn("Failed to load or execute the reporter. \nPlease notify developers at sirius.menu/discord.")
 				end
 			end)
 			if debugX then
@@ -673,11 +643,11 @@ repeat
 	correctBuild = false
 
 	if not warned then
-		warn("Rayfield | Build Mismatch")
+		warn("Build Mismatch")
 		print(
-			"Rayfield may encounter issues as you are running an incompatible interface version ("
+			"May encounter issues as you are running an incompatible interface version ("
 				.. ((Rayfield:FindFirstChild("Build") and Rayfield.Build.Value) or "No Build")
-				.. ").\n\nThis version of Rayfield is intended for interface build "
+				.. ").\n\nThis version is intended for interface build "
 				.. InterfaceBuild
 				.. "."
 		)
@@ -711,14 +681,14 @@ if gethui then
 	for _, Interface in ipairs(gethui():GetChildren()) do
 		if Interface.Name == Rayfield.Name and Interface ~= Rayfield then
 			Interface.Enabled = false
-			Interface.Name = "Rayfield-Old"
+			Interface.Name = "Interface-Old"
 		end
 	end
 elseif not useStudio then
 	for _, Interface in ipairs(CoreGui:GetChildren()) do
 		if Interface.Name == Rayfield.Name and Interface ~= Rayfield then
 			Interface.Enabled = false
-			Interface.Name = "Rayfield-Old"
+			Interface.Name = "Interface-Old"
 		end
 	end
 end
@@ -1000,7 +970,7 @@ local function LoadConfiguration(Configuration)
 	local changed
 
 	if not success then
-		warn("Rayfield had an issue decoding the configuration file, please try delete the file and reopen Rayfield.")
+		warn("Had an issue decoding the configuration file, please try delete the file and reopen.")
 		return
 	end
 
@@ -1021,9 +991,9 @@ local function LoadConfiguration(Configuration)
 				end
 			end)
 		else
-			warn("Rayfield | Unable to find '" .. FlagName .. "' in the save file.")
+			warn("Unable to find '" .. FlagName .. "' in the save file.")
 			print("The error above may not be an issue if new elements have been added or not been set values.")
-			--RayfieldLibrary:Notify({Title = "Rayfield Flags", Content = "Rayfield was unable to find '"..FlagName.. "' in the save file. Check sirius.menu/discord for help.", Image = 3944688398})
+			--Library:Notify({Title = "Flags", Content = "Was unable to find '"..FlagName.. "' in the save file. Check sirius.menu/discord for help.", Image = 3944688398})
 		end
 	end
 
@@ -1135,7 +1105,7 @@ function RayfieldLibrary:Notify(data) -- action e.g open messages
 		newNotification.Visible = true
 
 		if data.Actions then
-			warn("Rayfield | Not seeing your actions in notifications?")
+			warn("Not seeing your actions in notifications?")
 			print(
 				"Notification Actions are being sunset for now, keep up to date on when they're back in the discord. (sirius.menu/discord)"
 			)
@@ -1351,14 +1321,14 @@ local function Hide(notify: boolean?)
 		if useMobilePrompt then
 			RayfieldLibrary:Notify({
 				Title = "Interface Hidden",
-				Content = "The interface has been hidden, you can unhide the interface by tapping 'Show Rayfield'.",
+				Content = "The interface has been hidden, you can unhide it by tapping 'Show Interface'.",
 				Duration = 7,
 				Image = 4400697855,
 			})
 		else
 			RayfieldLibrary:Notify({
 				Title = "Interface Hidden",
-				Content = "The interface has been hidden, you can unhide the interface by tapping "
+				Content = "The interface has been hidden, you can unhide it by tapping "
 					.. getSetting("General", "rayfieldOpen")
 					.. ".",
 				Duration = 7,
@@ -1923,14 +1893,14 @@ local function createSettings(window)
 		return
 	end
 
-	local newTab = window:CreateTab("Rayfield Settings", 0, true)
+	local newTab = window:CreateTab("Settings", 0, true)
 
-	if TabList["Rayfield Settings"] then
-		TabList["Rayfield Settings"].LayoutOrder = 1000
+	if TabList["Settings"] then
+		TabList["Settings"].LayoutOrder = 1000
 	end
 
-	if Elements["Rayfield Settings"] then
-		Elements["Rayfield Settings"].LayoutOrder = 1000
+	if Elements["Settings"] then
+		Elements["Settings"].LayoutOrder = 1000
 	end
 
 	-- Create sections and elements
@@ -1980,7 +1950,7 @@ end
 
 function RayfieldLibrary:CreateWindow(Settings)
 	if Rayfield:FindFirstChild("Loading") then
-		if getgenv and not getgenv().rayfieldCached then
+		if getgenv and not getgenv().interfaceCached then
 			Rayfield.Enabled = true
 			Rayfield.Loading.Visible = true
 
@@ -1990,16 +1960,16 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end
 
 	if getgenv then
-		getgenv().rayfieldCached = true
+		getgenv().interfaceCached = true
 	end
 
 	if not correctBuild and not Settings.DisableBuildWarnings then
 		task.delay(3, function()
 			RayfieldLibrary:Notify({
 				Title = "Build Mismatch",
-				Content = "Rayfield may encounter issues as you are running an incompatible interface version ("
+				Content = "May encounter issues as you are running an incompatible interface version ("
 					.. ((Rayfield:FindFirstChild("Build") and Rayfield.Build.Value) or "No Build")
-					.. ").\n\nThis version of Rayfield is intended for interface build "
+					.. ").\n\nThis version is intended for interface build "
 					.. InterfaceBuild
 					.. ".\n\nTry rejoining and then run the script twice.",
 				Image = 4335487866,
@@ -2046,11 +2016,11 @@ function RayfieldLibrary:CreateWindow(Settings)
 	LoadingFrame.Subtitle.TextTransparency = 1
 
 	LoadingFrame.Version.TextTransparency = 1
-	LoadingFrame.Title.Text = Settings.LoadingTitle or "Rayfield"
+	LoadingFrame.Title.Text = Settings.LoadingTitle or "Interface"
 	LoadingFrame.Subtitle.Text = Settings.LoadingSubtitle or "Interface Suite"
 
-	if Settings.LoadingTitle ~= "Rayfield Interface Suite" then
-		LoadingFrame.Version.Text = "Rayfield UI"
+	if Settings.LoadingTitle ~= "Interface Suite" then
+		LoadingFrame.Version.Text = "UI Version"
 	end
 
 	if Settings.Icon and Settings.Icon ~= 0 and Topbar:FindFirstChild("Icon") then
@@ -2095,12 +2065,12 @@ function RayfieldLibrary:CreateWindow(Settings)
 	Elements.Visible = false
 	LoadingFrame.Visible = true
 
-	if not Settings.DisableRayfieldPrompts then
+	if not Settings.DisablePrompts then
 		task.spawn(function()
 			while true do
 				task.wait(math.random(180, 600))
 				RayfieldLibrary:Notify({
-					Title = "Rayfield Interface",
+					Title = "Interface",
 					Content = "Enjoying this UI library? Find it at sirius.menu/discord",
 					Duration = 7,
 					Image = 4370033185,
@@ -2177,7 +2147,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 			if Settings.Discord.RememberJoins then -- We do logic this way so if the developer changes this setting, the user still won't be prompted, only new users
 				writefile(
 					RayfieldFolder .. "/Discord Invites" .. "/" .. Settings.Discord.Invite .. ConfigurationExtension,
-					"Rayfield RememberJoins is true for this invite, this invite will not ask you to join again"
+					"RememberJoins is true for this invite, this invite will not ask you to join again"
 				)
 			end
 		end
@@ -2204,8 +2174,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 					Settings.KeySettings.Key[i] = string.gsub(Settings.KeySettings.Key[i], " ", "")
 				end)
 				if not Success then
-					print("Rayfield | " .. Key .. " Error " .. tostring(Response))
-					warn("Check docs.sirius.menu for help with Rayfield specific development.")
+					print("Interface | " .. Key .. " Error " .. tostring(Response))
+					warn("Check docs.sirius.menu for help with specific development.")
 				end
 			end
 		end
@@ -3983,8 +3953,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 								{ Transparency = 1 }
 							):Play()
 							Dropdown.Title.Text = "Callback Error"
-							print("Rayfield | " .. DropdownSettings.Name .. " Callback Error " .. tostring(Response))
-							warn("Check docs.sirius.menu for help with Rayfield specific development.")
+							print("Interface | " .. DropdownSettings.Name .. " Callback Error " .. tostring(Response))
+							warn("Check docs.sirius.menu for help with specific development.")
 							task.wait(0.5)
 							Dropdown.Title.Text = DropdownSettings.Name
 							TweenService:Create(
@@ -4122,8 +4092,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 						)
 						:Play()
 					Dropdown.Title.Text = "Callback Error"
-					print("Rayfield | " .. DropdownSettings.Name .. " Callback Error " .. tostring(Response))
-					warn("Check docs.sirius.menu for help with Rayfield specific development.")
+					print("Interface | " .. DropdownSettings.Name .. " Callback Error " .. tostring(Response))
+					warn("Check docs.sirius.menu for help with specific development.")
 					task.wait(0.5)
 					Dropdown.Title.Text = DropdownSettings.Name
 					TweenService:Create(
@@ -4283,8 +4253,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 								{ Transparency = 1 }
 							):Play()
 							Keybind.Title.Text = "Callback Error"
-							print("Rayfield | " .. KeybindSettings.Name .. " Callback Error " .. tostring(Response))
-							warn("Check docs.sirius.menu for help with Rayfield specific development.")
+							print("Interface | " .. KeybindSettings.Name .. " Callback Error " .. tostring(Response))
+							warn("Check docs.sirius.menu for help with specific development.")
 							task.wait(0.5)
 							Keybind.Title.Text = KeybindSettings.Name
 							TweenService:Create(
@@ -4503,8 +4473,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 						:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 1 })
 						:Play()
 					Toggle.Title.Text = "Callback Error"
-					print("Rayfield | " .. ToggleSettings.Name .. " Callback Error " .. tostring(Response))
-					warn("Check docs.sirius.menu for help with Rayfield specific development.")
+					print("Interface | " .. ToggleSettings.Name .. " Callback Error " .. tostring(Response))
+					warn("Check docs.sirius.menu for help with specific development.")
 					task.wait(0.5)
 					Toggle.Title.Text = ToggleSettings.Name
 					TweenService:Create(
@@ -4639,8 +4609,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 						:Create(Toggle.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 1 })
 						:Play()
 					Toggle.Title.Text = "Callback Error"
-					print("Rayfield | " .. ToggleSettings.Name .. " Callback Error " .. tostring(Response))
-					warn("Check docs.sirius.menu for help with Rayfield specific development.")
+					print("Interface | " .. ToggleSettings.Name .. " Callback Error " .. tostring(Response))
+					warn("Check docs.sirius.menu for help with specific development.")
 					task.wait(0.5)
 					Toggle.Title.Text = ToggleSettings.Name
 					TweenService:Create(
@@ -4855,8 +4825,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 									{ Transparency = 1 }
 								):Play()
 								Slider.Title.Text = "Callback Error"
-								print("Rayfield | " .. SliderSettings.Name .. " Callback Error " .. tostring(Response))
-								warn("Check docs.sirius.menu for help with Rayfield specific development.")
+								print("Interface | " .. SliderSettings.Name .. " Callback Error " .. tostring(Response))
+								warn("Check docs.sirius.menu for help with specific development.")
 								task.wait(0.5)
 								Slider.Title.Text = SliderSettings.Name
 								TweenService:Create(
@@ -4931,8 +4901,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 						:Create(Slider.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Transparency = 1 })
 						:Play()
 					Slider.Title.Text = "Callback Error"
-					print("Rayfield | " .. SliderSettings.Name .. " Callback Error " .. tostring(Response))
-					warn("Check docs.sirius.menu for help with Rayfield specific development.")
+					print("Interface | " .. SliderSettings.Name .. " Callback Error " .. tostring(Response))
+					warn("Check docs.sirius.menu for help with specific development.")
 					task.wait(0.5)
 					Slider.Title.Text = SliderSettings.Name
 					TweenService:Create(
@@ -5086,7 +5056,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end)
 
 	if not success then
-		warn("Rayfield had an issue creating settings.")
+		warn("Had an issue creating settings.")
 	end
 
 	return Window
@@ -5239,7 +5209,7 @@ if Topbar:FindFirstChild("Settings") then
 				end
 			end
 
-			Elements.UIPageLayout:JumpTo(Elements["Rayfield Settings"])
+			Elements.UIPageLayout:JumpTo(Elements["Settings"])
 		end)
 	end)
 end
@@ -5321,7 +5291,7 @@ function RayfieldLibrary:LoadConfiguration()
 			else
 				notified = true
 				RayfieldLibrary:Notify({
-					Title = "Rayfield Configurations",
+					Title = "Configurations",
 					Content = "We couldn't enable Configuration Saving as you are not using software with filesystem support.",
 					Image = 4384402990,
 				})
@@ -5330,14 +5300,14 @@ function RayfieldLibrary:LoadConfiguration()
 
 		if success and loaded and not notified then
 			RayfieldLibrary:Notify({
-				Title = "Rayfield Configurations",
+				Title = "Configurations",
 				Content = "The configuration file for this script has been loaded from a previous session.",
 				Image = 4384403532,
 			})
 		elseif not success and not notified then
-			warn("Rayfield Configurations Error | " .. tostring(result))
+			warn("Configurations Error | " .. tostring(result))
 			RayfieldLibrary:Notify({
-				Title = "Rayfield Configurations",
+				Title = "Configurations",
 				Content = "We've encountered an issue loading your configuration correctly.\n\nCheck the Developer Console for more information.",
 				Image = 4384402990,
 			})
@@ -5352,8 +5322,8 @@ if useStudio then
 	-- Feel free to place your own script here to see how it'd work in Roblox Studio before running it on your execution software.
 
 	local Window = RayfieldLibrary:CreateWindow({
-		Name = "Rayfield Example Window",
-		LoadingTitle = "Rayfield Interface Suite",
+		Name = "Example Window",
+		LoadingTitle = "Interface Suite",
 		Theme = "Default",
 		Icon = 0,
 		LoadingSubtitle = "by Sirius",
@@ -5374,7 +5344,7 @@ if useStudio then
 			Note = "No method of obtaining the key is provided",
 			FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
 			SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-			GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+			GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like to get the key from
 			Key = { "Hello" }, -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
 		},
 	})
@@ -5419,7 +5389,7 @@ if useStudio then
 		end,
 	})
 
-	--RayfieldLibrary:Notify({Title = "Rayfield Interface", Content = "Welcome to Rayfield. These - are the brand new notification design for Rayfield, with custom sizing and Rayfield calculated wait times.", Image = 4483362458})
+	--Library:Notify({Title = "Interface", Content = "Welcome. These are the brand new notification design, with custom sizing and calculated wait times.", Image = 4483362458})
 
 	local Section = Tab:CreateSection("Section Example")
 
