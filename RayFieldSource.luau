@@ -1949,33 +1949,10 @@ local function createSettings(window)
 end
 
 function RayfieldLibrary:CreateWindow(Settings)
-	if Rayfield:FindFirstChild("Loading") then
-		if getgenv and not getgenv().interfaceCached then
-			Rayfield.Enabled = true
-			Rayfield.Loading.Visible = true
-
-			task.wait(1.4)
-			Rayfield.Loading.Visible = false
-		end
-	end
+	-- Removed initial loading screen, build mismatch warnings, and related logic to make UI start instantly.
 
 	if getgenv then
-		getgenv().interfaceCached = true
-	end
-
-	if not correctBuild and not Settings.DisableBuildWarnings then
-		task.delay(3, function()
-			RayfieldLibrary:Notify({
-				Title = "Build Mismatch",
-				Content = "May encounter issues as you are running an incompatible interface version ("
-					.. ((Rayfield:FindFirstChild("Build") and Rayfield.Build.Value) or "No Build")
-					.. ").\n\nThis version is intended for interface build "
-					.. InterfaceBuild
-					.. ".\n\nTry rejoining and then run the script twice.",
-				Image = 4335487866,
-				Duration = 15,
-			})
-		end)
+		getgenv().interfaceCached = true -- This seems like a caching flag, potentially keep.
 	end
 
 	if Settings.ToggleUIKeybind then -- Can either be a string or an Enum.KeyCode
@@ -2001,53 +1978,63 @@ function RayfieldLibrary:CreateWindow(Settings)
 		makefolder(RayfieldFolder)
 	end
 
-	local Passthrough = false
 	Topbar.Title.Text = Settings.Name
 
-	Main.Size = UDim2.new(0, 420, 0, 100)
+	-- Set Main UI to final state immediately
+	Main.Size = useMobileSizing and UDim2.new(0, 500, 0, 275) or UDim2.new(0, 500, 0, 475)
 	Main.Visible = true
-	Main.BackgroundTransparency = 1
+	Main.BackgroundTransparency = 0 -- Instantly visible
 	if Main:FindFirstChild("Notice") then
-		Main.Notice.Visible = false
+		Main.Notice.Visible = false -- Assuming notice is not part of instant start
 	end
-	Main.Shadow.Image.ImageTransparency = 1
+	Main.Shadow.Image.ImageTransparency = 0.6 -- Final desired transparency for shadow
 
-	LoadingFrame.Title.TextTransparency = 1
-	LoadingFrame.Subtitle.TextTransparency = 1
+	LoadingFrame.Visible = true -- Show loading frame but hide logo image
 
-	LoadingFrame.Version.TextTransparency = 1
-	LoadingFrame.Title.Text = Settings.LoadingTitle or "Interface"
-	LoadingFrame.Subtitle.Text = Settings.LoadingSubtitle or "Interface Suite"
-
-	if Settings.LoadingTitle ~= "Interface Suite" then
-		LoadingFrame.Version.Text = "UI Version"
-	end
-
-	if Settings.Icon and Settings.Icon ~= 0 and Topbar:FindFirstChild("Icon") then
-		Topbar.Icon.Visible = true
-		Topbar.Title.Position = UDim2.new(0, 47, 0.5, 0)
-
-		if Settings.Icon then
-			if typeof(Settings.Icon) == "string" and Icons then
-				local asset = getIcon(Settings.Icon)
-
-				Topbar.Icon.Image = "rbxassetid://" .. asset.id
-				Topbar.Icon.ImageRectOffset = asset.imageRectOffset
-				Topbar.Icon.ImageRectSize = asset.imageRectSize
-			else
-				Topbar.Icon.Image = getAssetUri(Settings.Icon)
-			end
-		else
-			Topbar.Icon.Image = "rbxassetid://" .. 0
+	-- Hide the logo image while keeping text elements visible
+	for _, child in ipairs(LoadingFrame:GetChildren()) do
+		if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+			child.Visible = false
+		elseif child:IsA("TextLabel") then
+			-- Set initial transparency for text elements - they will be animated later
+			child.TextTransparency = 1
 		end
 	end
 
-	if dragBar then
-		dragBar.Visible = false
-		dragBarCosmetic.BackgroundTransparency = 1
-		dragBar.Visible = true
-	end
+	-- Animate loading text elements with original timing
+	task.spawn(function()
+		task.wait(0.5) -- Initial delay before showing text
 
+		-- Find and animate text elements
+		for _, child in ipairs(LoadingFrame:GetChildren()) do
+			if child:IsA("TextLabel") then
+				-- Fade in text
+				TweenService:Create(
+					child,
+					TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+					{ TextTransparency = 0 }
+				):Play()
+			end
+		end
+
+		task.wait(2.5) -- Display duration
+
+		-- Fade out text and hide loading frame
+		for _, child in ipairs(LoadingFrame:GetChildren()) do
+			if child:IsA("TextLabel") then
+				TweenService:Create(
+					child,
+					TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+					{ TextTransparency = 1 }
+				):Play()
+			end
+		end
+
+		task.wait(0.5) -- Wait for fade out to complete
+		LoadingFrame.Visible = false -- Hide loading frame after text animation
+	end)
+
+	-- Apply theme early to ensure SelectedTheme is set for subsequent direct property settings
 	if Settings.Theme then
 		local success, result = pcall(ChangeTheme, Settings.Theme)
 		if not success then
@@ -2059,11 +2046,74 @@ function RayfieldLibrary:CreateWindow(Settings)
 			warn("issue rendering theme. no theme on file")
 			print(result)
 		end
+	else -- Ensure a default theme is applied if none specified
+		pcall(ChangeTheme, "Default")
 	end
 
-	Topbar.Visible = false
-	Elements.Visible = false
-	LoadingFrame.Visible = true
+	-- Set Topbar properties to final state after theme is potentially applied
+	Topbar.BackgroundTransparency = 0
+	Topbar.CornerRepair.BackgroundTransparency = 0
+	Topbar.Divider.Size = UDim2.new(1, 0, 0, 1) -- Final size
+	Topbar.Divider.BackgroundTransparency = 0
+	if SelectedTheme then -- Check if SelectedTheme is set
+		Topbar.Divider.BackgroundColor3 = SelectedTheme.ElementStroke
+	end
+
+	if Settings.Icon and Settings.Icon ~= 0 and Topbar:FindFirstChild("Icon") then
+		Topbar.Icon.Visible = true
+		Topbar.Title.Position = UDim2.new(0, 47, 0.5, 0)
+		if Settings.Icon then
+			if typeof(Settings.Icon) == "string" and Icons then
+				local asset = getIcon(Settings.Icon)
+				Topbar.Icon.Image = "rbxassetid://" .. asset.id
+				Topbar.Icon.ImageRectOffset = asset.imageRectOffset
+				Topbar.Icon.ImageRectSize = asset.imageRectSize
+			else
+				Topbar.Icon.Image = getAssetUri(Settings.Icon)
+			end
+		else
+			Topbar.Icon.Image = "rbxassetid://" .. 0
+		end
+		Topbar.Icon.ImageTransparency = 0
+		if SelectedTheme then
+			Topbar.Icon.ImageColor3 = SelectedTheme.TextColor
+		end
+	end
+
+	Topbar.Title.TextTransparency = 0
+	if SelectedTheme then
+		Topbar.Title.TextColor3 = SelectedTheme.TextColor
+	end
+
+	Topbar.Search.ImageTransparency = 0.8
+	if SelectedTheme then
+		Topbar.Search.ImageColor3 = SelectedTheme.TextColor
+	end
+
+	if Topbar:FindFirstChild("Settings") then
+		Topbar.Settings.ImageTransparency = 0.8
+		if SelectedTheme then
+			Topbar.Settings.ImageColor3 = SelectedTheme.TextColor
+		end
+	end
+
+	Topbar.ChangeSize.ImageTransparency = 0.8
+	if SelectedTheme then
+		Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
+	end
+
+	Topbar.Hide.ImageTransparency = 0.8
+	if SelectedTheme then
+		Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
+	end
+
+	if dragBar then
+		dragBarCosmetic.BackgroundTransparency = 0.7 -- Final desired transparency for drag bar
+		dragBar.Visible = true
+	end
+
+	Topbar.Visible = true
+	Elements.Visible = true
 
 	if not Settings.DisablePrompts then
 		task.spawn(function()
@@ -2153,467 +2203,15 @@ function RayfieldLibrary:CreateWindow(Settings)
 		end
 	end
 
-	if Settings.KeySystem then
-		if not Settings.KeySettings then
-			Passthrough = true
-			return
-		end
-
-		if isfolder and not isfolder(RayfieldFolder .. "/Key System") then
-			makefolder(RayfieldFolder .. "/Key System")
-		end
-
-		if typeof(Settings.KeySettings.Key) == "string" then
-			Settings.KeySettings.Key = { Settings.KeySettings.Key }
-		end
-
-		if Settings.KeySettings.GrabKeyFromSite then
-			for i, Key in ipairs(Settings.KeySettings.Key) do
-				local Success, Response = pcall(function()
-					Settings.KeySettings.Key[i] = tostring(game:HttpGet(Key):gsub("[\n\r]", " "))
-					Settings.KeySettings.Key[i] = string.gsub(Settings.KeySettings.Key[i], " ", "")
-				end)
-				if not Success then
-					print("Interface | " .. Key .. " Error " .. tostring(Response))
-					warn("Check docs.sirius.menu for help with specific development.")
-				end
-			end
-		end
-
-		if not Settings.KeySettings.FileName then
-			Settings.KeySettings.FileName = "No file name specified"
-		end
-
-		if
-			isfile
-			and isfile(
-				RayfieldFolder .. "/Key System" .. "/" .. Settings.KeySettings.FileName .. ConfigurationExtension
-			)
-		then
-			for _, MKey in ipairs(Settings.KeySettings.Key) do
-				if
-					string.find(
-						readfile(
-							RayfieldFolder
-								.. "/Key System"
-								.. "/"
-								.. Settings.KeySettings.FileName
-								.. ConfigurationExtension
-						),
-						MKey
-					)
-				then
-					Passthrough = true
-				end
-			end
-		end
-
-		if not Passthrough then
-			local AttemptsRemaining = math.random(2, 5)
-			Rayfield.Enabled = false
-			local KeyUI = useStudio and script.Parent:FindFirstChild("Key")
-				or game:GetObjects("rbxassetid://11380036235")[1]
-
-			KeyUI.Enabled = true
-
-			if gethui then
-				KeyUI.Parent = gethui()
-			elseif syn and syn.protect_gui then
-				syn.protect_gui(KeyUI)
-				KeyUI.Parent = CoreGui
-			elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
-				KeyUI.Parent = CoreGui:FindFirstChild("RobloxGui")
-			elseif not useStudio then
-				KeyUI.Parent = CoreGui
-			end
-
-			if gethui then
-				for _, Interface in ipairs(gethui():GetChildren()) do
-					if Interface.Name == KeyUI.Name and Interface ~= KeyUI then
-						Interface.Enabled = false
-						Interface.Name = "KeyUI-Old"
-					end
-				end
-			elseif not useStudio then
-				for _, Interface in ipairs(CoreGui:GetChildren()) do
-					if Interface.Name == KeyUI.Name and Interface ~= KeyUI then
-						Interface.Enabled = false
-						Interface.Name = "KeyUI-Old"
-					end
-				end
-			end
-
-			local KeyMain = KeyUI.Main
-			KeyMain.Title.Text = Settings.KeySettings.Title or Settings.Name
-			KeyMain.Subtitle.Text = Settings.KeySettings.Subtitle or "Key System"
-			KeyMain.NoteMessage.Text = Settings.KeySettings.Note or "No instructions"
-
-			KeyMain.Size = UDim2.new(0, 467, 0, 175)
-			KeyMain.BackgroundTransparency = 1
-			KeyMain.Shadow.Image.ImageTransparency = 1
-			KeyMain.Title.TextTransparency = 1
-			KeyMain.Subtitle.TextTransparency = 1
-			KeyMain.KeyNote.TextTransparency = 1
-			KeyMain.Input.BackgroundTransparency = 1
-			KeyMain.Input.UIStroke.Transparency = 1
-			KeyMain.Input.InputBox.TextTransparency = 1
-			KeyMain.NoteTitle.TextTransparency = 1
-			KeyMain.NoteMessage.TextTransparency = 1
-			KeyMain.Hide.ImageTransparency = 1
-
-			TweenService
-				:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { Size = UDim2.new(0, 500, 0, 187) })
-				:Play()
-			TweenService
-				:Create(
-					KeyMain.Shadow.Image,
-					TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-					{ ImageTransparency = 0.5 }
-				)
-				:Play()
-			task.wait(0.05)
-			TweenService
-				:Create(KeyMain.Title, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(KeyMain.Subtitle, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
-			task.wait(0.05)
-			TweenService
-				:Create(KeyMain.KeyNote, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(KeyMain.Input, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(KeyMain.Input.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { Transparency = 0 })
-				:Play()
-			TweenService
-				:Create(
-					KeyMain.Input.InputBox,
-					TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-					{ TextTransparency = 0 }
-				)
-				:Play()
-			task.wait(0.05)
-			TweenService
-				:Create(KeyMain.NoteTitle, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(KeyMain.NoteMessage, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
-			task.wait(0.15)
-			TweenService
-				:Create(KeyMain.Hide, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { ImageTransparency = 0.3 })
-				:Play()
-
-			KeyUI.Main.Input.InputBox.FocusLost:Connect(function()
-				if #KeyUI.Main.Input.InputBox.Text == 0 then
-					return
-				end
-				local KeyFound = false
-				local FoundKey = ""
-				for _, MKey in ipairs(Settings.KeySettings.Key) do
-					--if string.find(KeyMain.Input.InputBox.Text, MKey) then
-					--	KeyFound = true
-					--	FoundKey = MKey
-					--end
-
-					-- stricter key check
-					if KeyMain.Input.InputBox.Text == MKey then
-						KeyFound = true
-						FoundKey = MKey
-					end
-				end
-				if KeyFound then
-					TweenService
-						:Create(
-							KeyMain,
-							TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-							{ BackgroundTransparency = 1 }
-						)
-						:Play()
-					TweenService:Create(
-						KeyMain,
-						TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-						{ Size = UDim2.new(0, 467, 0, 175) }
-					):Play()
-					TweenService:Create(
-						KeyMain.Shadow.Image,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ ImageTransparency = 1 }
-					):Play()
-					TweenService
-						:Create(
-							KeyMain.Title,
-							TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						)
-						:Play()
-					TweenService:Create(
-						KeyMain.Subtitle,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					):Play()
-					TweenService
-						:Create(
-							KeyMain.KeyNote,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						)
-						:Play()
-					TweenService:Create(
-						KeyMain.Input,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ BackgroundTransparency = 1 }
-					):Play()
-					TweenService:Create(
-						KeyMain.Input.UIStroke,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ Transparency = 1 }
-					):Play()
-					TweenService:Create(
-						KeyMain.Input.InputBox,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					):Play()
-					TweenService:Create(
-						KeyMain.NoteTitle,
-						TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					):Play()
-					TweenService:Create(
-						KeyMain.NoteMessage,
-						TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					):Play()
-					TweenService
-						:Create(
-							KeyMain.Hide,
-							TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-							{ ImageTransparency = 1 }
-						)
-						:Play()
-					task.wait(0.51)
-					Passthrough = true
-					KeyMain.Visible = false
-					if Settings.KeySettings.SaveKey then
-						if writefile then
-							writefile(
-								RayfieldFolder
-									.. "/Key System"
-									.. "/"
-									.. Settings.KeySettings.FileName
-									.. ConfigurationExtension,
-								FoundKey
-							)
-						end
-						RayfieldLibrary:Notify({
-							Title = "Key System",
-							Content = "The key for this script has been saved successfully.",
-							Image = 3605522284,
-						})
-					end
-				else
-					if AttemptsRemaining == 0 then
-						TweenService:Create(
-							KeyMain,
-							TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-							{ BackgroundTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain,
-							TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-							{ Size = UDim2.new(0, 467, 0, 175) }
-						):Play()
-						TweenService:Create(
-							KeyMain.Shadow.Image,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ ImageTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.Title,
-							TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.Subtitle,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.KeyNote,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.Input,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ BackgroundTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.Input.UIStroke,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ Transparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.Input.InputBox,
-							TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.NoteTitle,
-							TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.NoteMessage,
-							TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-							{ TextTransparency = 1 }
-						):Play()
-						TweenService:Create(
-							KeyMain.Hide,
-							TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-							{ ImageTransparency = 1 }
-						):Play()
-						task.wait(0.45)
-						Players.LocalPlayer:Kick("No Attempts Remaining")
-						game:Shutdown()
-					end
-					KeyMain.Input.InputBox.Text = ""
-					AttemptsRemaining = AttemptsRemaining - 1
-					TweenService:Create(
-						KeyMain,
-						TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-						{ Size = UDim2.new(0, 467, 0, 175) }
-					):Play()
-					TweenService:Create(
-						KeyMain,
-						TweenInfo.new(0.4, Enum.EasingStyle.Elastic),
-						{ Position = UDim2.new(0.495, 0, 0.5, 0) }
-					):Play()
-					task.wait(0.1)
-					TweenService:Create(
-						KeyMain,
-						TweenInfo.new(0.4, Enum.EasingStyle.Elastic),
-						{ Position = UDim2.new(0.505, 0, 0.5, 0) }
-					):Play()
-					task.wait(0.1)
-					TweenService:Create(
-						KeyMain,
-						TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-						{ Position = UDim2.new(0.5, 0, 0.5, 0) }
-					):Play()
-					TweenService:Create(
-						KeyMain,
-						TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-						{ Size = UDim2.new(0, 500, 0, 187) }
-					):Play()
-				end
-			end)
-
-			KeyMain.Hide.MouseButton1Click:Connect(function()
-				TweenService
-					:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundTransparency = 1 })
-					:Play()
-				TweenService
-					:Create(
-						KeyMain,
-						TweenInfo.new(0.6, Enum.EasingStyle.Exponential),
-						{ Size = UDim2.new(0, 467, 0, 175) }
-					)
-					:Play()
-				TweenService:Create(
-					KeyMain.Shadow.Image,
-					TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-					{ ImageTransparency = 1 }
-				):Play()
-				TweenService
-					:Create(KeyMain.Title, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { TextTransparency = 1 })
-					:Play()
-				TweenService
-					:Create(
-						KeyMain.Subtitle,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					)
-					:Play()
-				TweenService
-					:Create(KeyMain.KeyNote, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { TextTransparency = 1 })
-					:Play()
-				TweenService
-					:Create(
-						KeyMain.Input,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ BackgroundTransparency = 1 }
-					)
-					:Play()
-				TweenService
-					:Create(
-						KeyMain.Input.UIStroke,
-						TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-						{ Transparency = 1 }
-					)
-					:Play()
-				TweenService:Create(
-					KeyMain.Input.InputBox,
-					TweenInfo.new(0.5, Enum.EasingStyle.Exponential),
-					{ TextTransparency = 1 }
-				):Play()
-				TweenService
-					:Create(
-						KeyMain.NoteTitle,
-						TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					)
-					:Play()
-				TweenService
-					:Create(
-						KeyMain.NoteMessage,
-						TweenInfo.new(0.4, Enum.EasingStyle.Exponential),
-						{ TextTransparency = 1 }
-					)
-					:Play()
-				TweenService
-					:Create(KeyMain.Hide, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), { ImageTransparency = 1 })
-					:Play()
-				task.wait(0.51)
-				RayfieldLibrary:Destroy()
-				KeyUI:Destroy()
-			end)
-		else
-			Passthrough = true
-		end
-	end
-	if Settings.KeySystem then
-		repeat
-			task.wait()
-		until Passthrough
-	end
+	-- KeySystem and its associated UI and delays have been removed.
+	-- The 'Passthrough' variable and the loop 'repeat task.wait() until Passthrough' are no longer needed.
 
 	Notifications.Template.Visible = false
 	Notifications.Visible = true
 	Rayfield.Enabled = true
 
-	task.wait(0.5)
-	TweenService:Create(Main, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
-	TweenService
-		:Create(Main.Shadow.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { ImageTransparency = 0.6 })
-		:Play()
-	task.wait(0.1)
-	TweenService:Create(LoadingFrame.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-		:Play()
-	task.wait(0.05)
-	TweenService
-		:Create(LoadingFrame.Subtitle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-		:Play()
-	task.wait(0.05)
-	TweenService
-		:Create(LoadingFrame.Version, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-		:Play()
+	-- Removed animations for Main, Shadow, and LoadingFrame elements as their final states are set earlier.
+	-- No task.wait() calls needed here for the boot sequence.
 
 	Elements.Template.LayoutOrder = 100000
 	Elements.Template.Visible = false
@@ -2690,38 +2288,24 @@ function RayfieldLibrary:CreateWindow(Settings)
 			TabButton.Title.TextColor3 = SelectedTheme.TabTextColor
 		end
 
-		-- Animate
-		task.wait(0.1)
+		-- Set TabButton properties directly for instant appearance
 		if FirstTab or Ext then
 			TabButton.BackgroundColor3 = SelectedTheme.TabBackground
 			TabButton.Image.ImageColor3 = SelectedTheme.TabTextColor
 			TabButton.Title.TextColor3 = SelectedTheme.TabTextColor
-			TweenService
-				:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0.7 })
-				:Play()
-			TweenService
-				:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0.2 })
-				:Play()
-			TweenService
-				:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { ImageTransparency = 0.2 })
-				:Play()
-			TweenService
-				:Create(TabButton.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0.5 })
-				:Play()
+			TabButton.BackgroundTransparency = 0.7
+			TabButton.Title.TextTransparency = 0.2
+			TabButton.Image.ImageTransparency = 0.2
+			TabButton.UIStroke.Transparency = 0.5
 		elseif not Ext then
-			FirstTab = Name
+			FirstTab = Name -- This logic determines the initially selected tab
 			TabButton.BackgroundColor3 = SelectedTheme.TabBackgroundSelected
 			TabButton.Image.ImageColor3 = SelectedTheme.SelectedTabTextColor
 			TabButton.Title.TextColor3 = SelectedTheme.SelectedTabTextColor
-			TweenService
-				:Create(TabButton.Image, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { ImageTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(TabButton, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 })
-				:Play()
-			TweenService
-				:Create(TabButton.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
+			TabButton.Image.ImageTransparency = 0
+			TabButton.BackgroundTransparency = 0
+			TabButton.Title.TextTransparency = 0
+			TabButton.UIStroke.Transparency = 1 -- Or 0, depending on selected tab style for stroke
 		end
 
 		TabButton.Interact.MouseButton1Click:Connect(function()
@@ -2818,18 +2402,15 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Button.Visible = true
 			Button.Parent = TabPage
 
-			Button.BackgroundTransparency = 1
-			Button.UIStroke.Transparency = 1
-			Button.Title.TextTransparency = 1
-
-			TweenService
-				:Create(Button, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 })
-				:Play()
-			TweenService:Create(Button.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { Transparency = 0 })
-				:Play()
-			TweenService
-				:Create(Button.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { TextTransparency = 0 })
-				:Play()
+			-- Set Button properties directly for instant appearance
+			Button.BackgroundTransparency = 0
+			Button.UIStroke.Transparency = 0
+			Button.Title.TextTransparency = 0
+			-- Apply themed colors directly if not handled by ChangeTheme or a parent
+			Button.BackgroundColor3 = SelectedTheme.ElementBackground
+			Button.UIStroke.Color = SelectedTheme.ElementStroke
+			Button.Title.TextColor3 = SelectedTheme.TextColor
+			Button.ElementIndicator.TextTransparency = 0.9 -- Default state
 
 			Button.Interact.MouseButton1Click:Connect(function()
 				local Success, Response = pcall(ButtonSettings.Callback)
@@ -4960,77 +4541,9 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 	Elements.Visible = true
 
-	task.wait(1.1)
-	TweenService:Create(
-		Main,
-		TweenInfo.new(0.7, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut),
-		{ Size = UDim2.new(0, 390, 0, 90) }
-	):Play()
-	task.wait(0.3)
-	TweenService:Create(LoadingFrame.Title, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), { TextTransparency = 1 })
-		:Play()
-	TweenService
-		:Create(LoadingFrame.Subtitle, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), { TextTransparency = 1 })
-		:Play()
-	TweenService
-		:Create(LoadingFrame.Version, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), { TextTransparency = 1 })
-		:Play()
-	task.wait(0.1)
-	TweenService:Create(
-		Main,
-		TweenInfo.new(0.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
-		{ Size = useMobileSizing and UDim2.new(0, 500, 0, 275) or UDim2.new(0, 500, 0, 475) }
-	):Play()
-	TweenService
-		:Create(Main.Shadow.Image, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), { ImageTransparency = 0.6 })
-		:Play()
-
-	Topbar.BackgroundTransparency = 1
-	Topbar.Divider.Size = UDim2.new(0, 0, 0, 1)
-	Topbar.Divider.BackgroundColor3 = SelectedTheme.ElementStroke
-	Topbar.CornerRepair.BackgroundTransparency = 1
-	Topbar.Title.TextTransparency = 1
-	Topbar.Search.ImageTransparency = 1
-	if Topbar:FindFirstChild("Settings") then
-		Topbar.Settings.ImageTransparency = 1
-	end
-	Topbar.ChangeSize.ImageTransparency = 1
-	Topbar.Hide.ImageTransparency = 1
-
-	task.wait(0.5)
-	Topbar.Visible = true
-	TweenService:Create(Topbar, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 }):Play()
-	TweenService
-		:Create(Topbar.CornerRepair, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0 })
-		:Play()
-	task.wait(0.1)
-	TweenService
-		:Create(Topbar.Divider, TweenInfo.new(1, Enum.EasingStyle.Exponential), { Size = UDim2.new(1, 0, 0, 1) })
-		:Play()
-	TweenService:Create(Topbar.Title, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { TextTransparency = 0 }):Play()
-	task.wait(0.05)
-	TweenService:Create(Topbar.Search, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { ImageTransparency = 0.8 })
-		:Play()
-	task.wait(0.05)
-	if Topbar:FindFirstChild("Settings") then
-		TweenService
-			:Create(Topbar.Settings, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { ImageTransparency = 0.8 })
-			:Play()
-		task.wait(0.05)
-	end
-	TweenService
-		:Create(Topbar.ChangeSize, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { ImageTransparency = 0.8 })
-		:Play()
-	task.wait(0.05)
-	TweenService:Create(Topbar.Hide, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { ImageTransparency = 0.8 })
-		:Play()
-	task.wait(0.3)
-
-	if dragBar then
-		TweenService
-			:Create(dragBarCosmetic, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { BackgroundTransparency = 0.7 })
-			:Play()
-	end
+	-- Removed final boot-up animations for Main, LoadingFrame, Topbar.
+	-- UI elements are set to their final states earlier in the CreateWindow function.
+	-- The dragBar cosmetic transparency is also set earlier.
 
 	function Window.ModifyTheme(NewTheme)
 		local success = pcall(ChangeTheme, NewTheme)
