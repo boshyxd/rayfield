@@ -1945,47 +1945,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 	end
 	Main.Shadow.Image.ImageTransparency = 0.6
 
-	LoadingFrame.Visible = true
-
-	for _, child in ipairs(LoadingFrame:GetChildren()) do
-		if child:IsA("ImageLabel") or child:IsA("ImageButton") then
-			child.Visible = false
-		elseif child:IsA("TextLabel") then
-			if child.Name ~= "Version" then
-				child.Text = ""
-			end
-			child.TextTransparency = 1
-		end
-	end
-
-	task.spawn(function()
-		task.wait(0.5)
-
-		for _, child in ipairs(LoadingFrame:GetChildren()) do
-			if child:IsA("TextLabel") then
-				TweenService:Create(
-					child,
-					TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{ TextTransparency = 0 }
-				):Play()
-			end
-		end
-
-		task.wait(2.5)
-
-		for _, child in ipairs(LoadingFrame:GetChildren()) do
-			if child:IsA("TextLabel") then
-				TweenService:Create(
-					child,
-					TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-					{ TextTransparency = 1 }
-				):Play()
-			end
-		end
-
-		task.wait(0.5)
-		LoadingFrame.Visible = false
-	end)
+	-- Loading screen removed to eliminate branding
+	LoadingFrame.Visible = false
 
 	if Settings.Theme then
 		local success, result = pcall(ChangeTheme, Settings.Theme)
