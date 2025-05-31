@@ -1,8 +1,5 @@
 --[[
 
-	Interface Suite
-	by Sirius
-
 	shlex | Designing + Programming
 	iRay  | Programming
 	Max   | Programming
@@ -66,7 +63,7 @@ end
 
 local requestsDisabled = true --getgenv and getgenv().DISABLE_INTERFACE_REQUESTS
 local InterfaceBuild = "3K3W"
-local Release = "Build 1.672"
+local Release = ""
 local RayfieldFolder = "Rayfield"
 local ConfigurationFolder = RayfieldFolder .. "/Configurations"
 local ConfigurationExtension = ".rfld"
